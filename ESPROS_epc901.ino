@@ -79,7 +79,7 @@ void loop()
         case GAIN:
           bool success = false;
           
-          success = write_register(EPC901_ADDR, ACQ_TX_CONF_I2C, ROI_SEL_MASK, ROI_SEL_HALF);
+          success = write_register(EPC901_ADDR, ACQ_TX_CONF_I2C, RD_DIR_MASK, RD_DIR_RL);
 
           if (success)
             Serial.println("SUCCESS");
@@ -218,7 +218,6 @@ void epc901_read(void)
 
 bool write_register(uint8_t devAddr, uint8_t registerAddr, uint8_t mask, uint8_t settings)
 {
-  bool error_flag = false;
   uint8_t register_val = 0;
 
   /*
@@ -231,7 +230,6 @@ bool write_register(uint8_t devAddr, uint8_t registerAddr, uint8_t mask, uint8_t
    * Read and Modify
    */
   register_val = read_register(devAddr, registerAddr);
-  print_register(register_val);
   register_val = set_register(register_val, mask, settings);  
   print_register(register_val);
 
@@ -248,20 +246,22 @@ bool write_register(uint8_t devAddr, uint8_t registerAddr, uint8_t mask, uint8_t
    * Check epc901 I2C error flag to make sure the register 
    * operation was properly serviced.
    */
-  error_flag = read_register(EPC901_ADDR, I2C_ERROR_IND);
+  bool error_flag = read_register(EPC901_ADDR, I2C_ERROR_IND);
   if (error_flag)
     return false; // Register operation failed
   else
     return true;  // Register operation success
 }
 
-uint8_t set_register(uint8_t reg_val, uint8_t mask, uint8_t settings)
+uint8_t set_register(uint8_t register_contents, uint8_t mask, uint8_t new_settings)
 {
-  reg_val &= mask;
-  print_register(reg_val);
-  reg_val |= (settings & ~mask);
+  /*
+   * Combine new settings with existing register contents.
+   */
+  new_settings &= mask;
+  new_settings |= (register_contents & ~mask);
 
-  return reg_val;
+  return new_settings;
 }
 
 uint8_t read_register(uint8_t devAddr, uint8_t registerAddr)
